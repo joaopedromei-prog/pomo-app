@@ -250,7 +250,7 @@ struct TasksView: View {
     }
 
     private func handleSpaceKey() -> KeyPress.Result {
-        guard let id = selectedID, editingID == nil else { return .ignored }
+        guard let id = selectedID, editingID == nil, !newTaskFocused else { return .ignored }
         store.toggleCompleted(id: id)
         return .handled
     }
@@ -507,6 +507,9 @@ private struct NewTaskInput: View {
         .padding(.vertical, 11)
         .background(Color(white: 0.1))
         .clipShape(RoundedRectangle(cornerRadius: 10))
+        .onHover { inside in
+            if inside { NSCursor.iBeam.push() } else { NSCursor.pop() }
+        }
     }
 }
 
