@@ -37,10 +37,22 @@ struct SettingsView: View {
                 }
 
                 SettingsSection(title: "Teclas de Atalho") {
+                    ShortcutGroupLabel("Timer")
                     ShortcutRow(label: "Iniciar", keys: ["Espaço"])
                     ShortcutRow(label: "Encerrar sessão", keys: ["Esc"])
                     ShortcutRow(label: "Pular fase", keys: ["⌘", "→"])
                     ShortcutRow(label: "Fechar alarme", keys: ["↩"])
+
+                    Divider()
+                        .overlay(Color(white: 0.2))
+                        .padding(.vertical, 2)
+
+                    ShortcutGroupLabel("Tarefas")
+                    ShortcutRow(label: "Concluir tarefa", keys: ["Espaço"])
+                    ShortcutRow(label: "Apagar tarefa", keys: ["⌘", "⌫"])
+                    ShortcutRow(label: "Nova subtarefa", keys: ["⌘", "↩"])
+                    ShortcutRow(label: "Indentar", keys: ["⌘", "]"])
+                    ShortcutRow(label: "Recuar", keys: ["⌘", "["])
                 }
 
             }
@@ -183,6 +195,18 @@ private struct DurationRow: View {
         } else {
             draft = "\(value)"
         }
+    }
+}
+
+private struct ShortcutGroupLabel: View {
+    let title: String
+    init(_ title: String) { self.title = title }
+
+    var body: some View {
+        Text(title.uppercased())
+            .font(.system(size: 10, weight: .medium, design: .monospaced))
+            .tracking(1)
+            .foregroundStyle(Color(white: 0.35))
     }
 }
 
