@@ -30,7 +30,7 @@ final class TimerEngine {
 
     // MARK: - Settings (kept in sync from SettingsView)
     var focusDuration = 60 * 60 {
-        didSet { if !isRunning && phase == .idle { remainingSeconds = focusDuration } }
+        didSet { if !isRunning && (phase == .idle || phase == .focus) { remainingSeconds = focusDuration } }
     }
     var shortBreakDuration = 10 * 60
     var longBreakDuration = 20 * 60
@@ -40,6 +40,11 @@ final class TimerEngine {
 
     // MARK: - Session callback
     var onSessionComplete: ((SessionData) -> Void)?
+
+    func applyFocusDuration() {
+        guard !isRunning && (phase == .idle || phase == .focus) else { return }
+        remainingSeconds = focusDuration
+    }
 
     // MARK: - Private
     private var timer: Timer?

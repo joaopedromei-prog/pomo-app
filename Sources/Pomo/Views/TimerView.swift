@@ -153,10 +153,12 @@ struct TimerView: View {
                         labeledButton(icon: "xmark", label: "encerrar") {
                             engine.reset()
                         }
+                        .keyboardShortcut(.escape, modifiers: [])
                         if engine.mode == .pomodoro {
                             labeledButton(icon: "forward.fill", label: "pular") {
                                 engine.skip()
                             }
+                            .keyboardShortcut(.rightArrow, modifiers: [.command])
                         } else {
                             labeledButton(icon: "stop.fill", label: "parar") {
                                 engine.stopStopwatch()
@@ -166,6 +168,7 @@ struct TimerView: View {
                         labeledButton(icon: "play.fill", label: "iniciar", primary: true) {
                             engine.start()
                         }
+                        .keyboardShortcut(.space, modifiers: [])
                     }
                 }
                 .animation(.easeInOut(duration: 0.2), value: engine.isRunning)

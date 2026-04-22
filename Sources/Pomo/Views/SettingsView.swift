@@ -36,6 +36,13 @@ struct SettingsView: View {
                         }
                 }
 
+                SettingsSection(title: "Teclas de Atalho") {
+                    ShortcutRow(label: "Iniciar", keys: ["Espaço"])
+                    ShortcutRow(label: "Encerrar sessão", keys: ["Esc"])
+                    ShortcutRow(label: "Pular fase", keys: ["⌘", "→"])
+                    ShortcutRow(label: "Fechar alarme", keys: ["↩"])
+                }
+
             }
             .padding(24)
         }
@@ -58,6 +65,7 @@ struct SettingsView: View {
         engine.cyclesBeforeLongBreak = cyclesBeforeLongBreak
         engine.soundEnabled = soundEnabled
         engine.notificationsEnabled = notificationsEnabled
+        engine.applyFocusDuration()
     }
 
     private func toggleLaunchAtLogin(_ enable: Bool) {
@@ -174,6 +182,46 @@ private struct DurationRow: View {
             value = v
         } else {
             draft = "\(value)"
+        }
+    }
+}
+
+private struct KeyBadge: View {
+    let key: String
+
+    var body: some View {
+        Text(key)
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(Color(white: 0.7))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(Color(white: 0.12))
+                    .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color(white: 0.25), lineWidth: 1))
+            )
+    }
+}
+
+private struct ShortcutRow: View {
+    let label: String
+    let keys: [String]
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 13))
+            Spacer()
+            HStack(spacing: 4) {
+                ForEach(Array(keys.enumerated()), id: \.offset) { idx, key in
+                    if idx > 0 {
+                        Text("+")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Color(white: 0.35))
+                    }
+                    KeyBadge(key: key)
+                }
+            }
         }
     }
 }
