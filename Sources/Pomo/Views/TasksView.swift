@@ -167,7 +167,7 @@ struct TasksView: View {
                     .keyboardShortcut("[", modifiers: .command)
                     .opacity(0).frame(width: 0, height: 0)
                 Button("subtask") { _ = handleAddSubtask() }
-                    .keyboardShortcut(.return, modifiers: .option)
+                    .keyboardShortcut(.return, modifiers: .command)
                     .opacity(0).frame(width: 0, height: 0)
             }
         }
@@ -456,7 +456,7 @@ private struct TaskRowView: View {
                         .foregroundStyle(Color(white: 0.30))
                 }
                 .buttonStyle(.plain)
-                .help("Criar subtarefa (⌥↩)")
+                .help("Criar subtarefa (⌘↩)")
                 .onHover { inside in if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() } }
             }
             .padding(.horizontal, 14)
