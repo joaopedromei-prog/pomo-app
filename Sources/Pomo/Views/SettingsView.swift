@@ -129,6 +129,7 @@ private struct DurationRow: View {
                             Image(systemName: "chevron.up")
                                 .font(.system(size: 8, weight: .bold))
                                 .frame(width: 22, height: 13)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         Rectangle()
@@ -138,6 +139,7 @@ private struct DurationRow: View {
                             Image(systemName: "chevron.down")
                                 .font(.system(size: 8, weight: .bold))
                                 .frame(width: 22, height: 13)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     }
@@ -154,6 +156,7 @@ private struct DurationRow: View {
                 Text(unit)
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
+                    .frame(minWidth: 44, alignment: .leading)
             }
         }
         .onAppear { draft = "\(value)" }
