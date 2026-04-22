@@ -347,6 +347,8 @@ private struct TaskRowView: View {
     let onDelete: () -> Void
     let onAddSubtask: () -> Void
 
+    @State private var isHovered = false
+
     private var item: TodoItem { row.item }
 
     private var isDropChild: Bool { dropZone == .child(item.id) }
@@ -444,13 +446,14 @@ private struct TaskRowView: View {
             .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(isDropChild ? Color(white: 0.18) : isSelected ? Color(white: 0.14) : Color(white: 0.1))
+                    .fill(isDropChild ? Color(white: 0.18) : isSelected ? Color(white: 0.14) : isHovered ? Color(white: 0.13) : Color(white: 0.1))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(isDropChild ? Color(white: 0.40) : Color.clear, lineWidth: 1)
             )
             .contentShape(Rectangle())
+            .onHover { isHovered = $0 }
             .onTapGesture(perform: onSelect)
             .contextMenu {
                 Button(role: .destructive, action: onDelete) {
