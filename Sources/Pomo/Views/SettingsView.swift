@@ -133,7 +133,7 @@ private struct DurationRow: View {
                         .buttonStyle(.plain)
                         Rectangle()
                             .fill(Color(white: 0.22))
-                            .frame(height: 1)
+                            .frame(width: 22, height: 1)
                         Button { nudge(-1) } label: {
                             Image(systemName: "chevron.down")
                                 .font(.system(size: 8, weight: .bold))
@@ -144,6 +144,7 @@ private struct DurationRow: View {
                     .foregroundStyle(Color(white: 0.50))
                 }
                 .padding(.vertical, 2)
+                .fixedSize()
                 .background(
                     RoundedRectangle(cornerRadius: 7)
                         .fill(Color(white: 0.12))
