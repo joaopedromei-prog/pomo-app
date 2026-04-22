@@ -18,6 +18,8 @@ struct FocusBar: Identifiable {
 struct HistoryView: View {
     @Environment(PersistenceStore.self) private var store
     @State private var period: HistoryPeriod = .day
+    @State private var hoveredBar: FocusBar?
+    @State private var tooltipPos: CGPoint = .zero
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -76,6 +78,35 @@ struct HistoryView: View {
                         }
                     }
                 }
+                .chartOverlay { proxy in
+                    GeometryReader { geo in
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onContinuousHover { phase in
+                                switch phase {
+                                case .active(let loc):
+                                    if let frame = proxy.plotFrame {
+                                        let xInPlot = loc.x - geo[frame].origin.x
+                                        if let label: String = proxy.value(atX: xInPlot) {
+                                            hoveredBar = bars.first { $0.label == label }
+                                        } else {
+                                            hoveredBar = nil
+                                        }
+                                    }
+                                    tooltipPos = loc
+                                case .ended:
+                                    hoveredBar = nil
+                                }
+                            }
+                    }
+                }
+                .overlay(alignment: .topLeading) {
+                    if let bar = hoveredBar {
+                        BarTooltip(bar: bar)
+                            .offset(x: max(4, tooltipPos.x - 50), y: max(4, tooltipPos.y - 68))
+                            .allowsHitTesting(false)
+                    }
+                }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 24)
             }
@@ -98,13 +129,69 @@ struct HistoryView: View {
     }
 
     private var subtitleLabel: String {
-        let bars = buildBars()
-        let nonZero = bars.filter { $0.hours > 0 }
-        guard !nonZero.isEmpty else { return "Sem sessões registradas" }
-        let avg = nonZero.reduce(0) { $0 + $1.hours } / Double(nonZero.count)
+        let cal = Calendar.current
+        let now = Date()
+        let prefix: String
+        let avg: Double
+
+        switch period {
+        case .day:
+            prefix = "Média diária"
+            guard let start = cal.date(byAdding: .day, value: -29, to: cal.startOfDay(for: now)) else { return "Sem sessões registradas" }
+            var total = 0.0; var nonZeroDays = 0
+            for offset in 0..<30 {
+                guard let date = cal.date(byAdding: .day, value: offset, to: start),
+                      let next = cal.date(byAdding: .day, value: 1, to: date) else { continue }
+                let h = Double(store.sessions.filter { $0.endedAt >= date && $0.endedAt < next }
+                    .reduce(0) { $0 + $1.actualDuration }) / 3600.0
+                if h > 0 { total += h; nonZeroDays += 1 }
+            }
+            guard nonZeroDays > 0 else { return "Sem sessões registradas" }
+            avg = total / Double(nonZeroDays)
+
+        case .week:
+            prefix = "Média semanal"
+            guard let yearAgo = cal.date(byAdding: .year, value: -1, to: now) else { return "Sem sessões registradas" }
+            var weekBuckets: [Date: Double] = [:]
+            for s in store.sessions where s.endedAt >= yearAgo {
+                guard let ws = cal.date(from: cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: s.endedAt)) else { continue }
+                weekBuckets[ws, default: 0] += Double(s.actualDuration) / 3600.0
+            }
+            for a in store.weeklyAggregates where a.weekStart >= yearAgo {
+                weekBuckets[a.weekStart, default: 0] += Double(a.totalFocusSeconds) / 3600.0
+            }
+            let nonZeroW = weekBuckets.values.filter { $0 > 0 }
+            guard !nonZeroW.isEmpty else { return "Sem sessões registradas" }
+            avg = nonZeroW.reduce(0, +) / Double(nonZeroW.count)
+
+        case .month:
+            prefix = "Média mensal"
+            guard let yearAgo = cal.date(byAdding: .year, value: -1, to: now) else { return "Sem sessões registradas" }
+            var monthBuckets: [Date: Double] = [:]
+            for s in store.sessions where s.endedAt >= yearAgo {
+                guard let ms = cal.date(from: cal.dateComponents([.year, .month], from: s.endedAt)) else { continue }
+                monthBuckets[ms, default: 0] += Double(s.actualDuration) / 3600.0
+            }
+            for a in store.weeklyAggregates where a.weekStart >= yearAgo {
+                guard let ms = cal.date(from: cal.dateComponents([.year, .month], from: a.weekStart)) else { continue }
+                monthBuckets[ms, default: 0] += Double(a.totalFocusSeconds) / 3600.0
+            }
+            for a in store.monthlyAggregates where a.monthStart >= yearAgo {
+                monthBuckets[a.monthStart, default: 0] += Double(a.totalFocusSeconds) / 3600.0
+            }
+            let nonZeroM = monthBuckets.values.filter { $0 > 0 }
+            guard !nonZeroM.isEmpty else { return "Sem sessões registradas" }
+            avg = nonZeroM.reduce(0, +) / Double(nonZeroM.count)
+
+        case .year:
+            prefix = "Média anual"
+            let nonZero = buildBars().filter { $0.hours > 0 }
+            guard !nonZero.isEmpty else { return "Sem sessões registradas" }
+            avg = nonZero.reduce(0) { $0 + $1.hours } / Double(nonZero.count)
+        }
+
         let h = Int(avg); let m = Int((avg - Double(h)) * 60)
-        let formatted = h > 0 ? "\(h)h \(m)min" : "\(m)min"
-        return "Média: \(formatted)"
+        return "\(prefix): \(h > 0 ? "\(h)h \(m)min" : "\(m)min")"
     }
 
     private func currentPeriodTotal() -> Double {
@@ -215,5 +302,36 @@ struct HistoryView: View {
 
     private func monthStart(of date: Date, cal: Calendar) -> Date {
         cal.date(from: cal.dateComponents([.year, .month], from: date)) ?? date
+    }
+}
+
+// MARK: - BarTooltip
+
+private struct BarTooltip: View {
+    let bar: FocusBar
+
+    private var formatted: String {
+        let h = Int(bar.hours)
+        let m = Int((bar.hours - Double(h)) * 60)
+        return h > 0 ? "\(h)h \(m)min" : "\(m)min"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(bar.label)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(Color(white: 0.55))
+            Text("Tempo de foco: \(formatted)")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color(white: 0.92))
+        }
+        .padding(.horizontal, 11)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(white: 0.13))
+                .shadow(color: .black.opacity(0.45), radius: 10, x: 0, y: 4)
+        )
+        .fixedSize()
     }
 }
