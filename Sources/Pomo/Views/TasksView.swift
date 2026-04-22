@@ -384,11 +384,12 @@ private struct TaskRowView: View {
                         Image(systemName: item.isExpanded ? "chevron.down" : "chevron.right")
                             .font(.system(size: 10))
                             .foregroundStyle(Color(white: 0.45))
-                            .frame(width: 14, height: 14)
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 } else {
-                    Color.clear.frame(width: 14, height: 14)
+                    Color.clear.frame(width: 28, height: 28)
                 }
 
                 // Checkbox
@@ -396,6 +397,8 @@ private struct TaskRowView: View {
                     Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 16))
                         .foregroundStyle(item.isCompleted ? Color(white: 0.65) : Color(white: 0.35))
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
 
@@ -441,6 +444,8 @@ private struct TaskRowView: View {
                     Image(systemName: item.isStarred ? "star.fill" : "star")
                         .font(.system(size: 12))
                         .foregroundStyle(item.isStarred ? Color(white: 0.73) : Color(white: 0.30))
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help("Destacar tarefa")
@@ -454,6 +459,8 @@ private struct TaskRowView: View {
                     Image(systemName: "plus")
                         .font(.system(size: 11))
                         .foregroundStyle(Color(white: 0.30))
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help("Criar subtarefa (⌘↩)")
@@ -555,10 +562,11 @@ private struct DueDateButton: View {
             Image(systemName: currentDate == nil ? "calendar" : "calendar.badge.checkmark")
                 .font(.system(size: 12))
                 .foregroundStyle(Color(white: 0.35))
+                .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
-        .fixedSize()
         .help("Definir data")
         .onHover { inside in if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() } }
         .popover(isPresented: $showCustom) {
@@ -632,6 +640,8 @@ private struct CompletedSection: View {
                         .tracking(1.5)
                 }
                 .foregroundStyle(.secondary)
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .padding(.top, 12)
