@@ -154,6 +154,14 @@ struct TimerView: View {
                             engine.reset()
                         }
                         .keyboardShortcut(.escape, modifiers: [])
+                        labeledButton(
+                            icon: engine.isPaused ? "play.fill" : "pause.fill",
+                            label: engine.isPaused ? "retomar" : "pausar",
+                            primary: true
+                        ) {
+                            engine.isPaused ? engine.start() : engine.pause()
+                        }
+                        .keyboardShortcut(.space, modifiers: [])
                         if engine.mode == .pomodoro {
                             labeledButton(icon: "forward.fill", label: "pular") {
                                 engine.skip()
@@ -172,6 +180,7 @@ struct TimerView: View {
                     }
                 }
                 .animation(.easeInOut(duration: 0.2), value: engine.isRunning)
+                .animation(.easeInOut(duration: 0.15), value: engine.isPaused)
                 .padding(.bottom, 36)
             }
         }
