@@ -243,8 +243,8 @@ struct TasksView: View {
         let idx = rows.firstIndex(where: { $0.id == id })
         store.deleteTodo(id: id)
         if let idx = idx {
-            let next = rows.indices.contains(idx) ? rows[min(idx, rows.count - 2)].id : nil
-            selectedID = next
+            let nextIdx = idx < rows.count - 1 ? idx + 1 : idx - 1
+            selectedID = nextIdx >= 0 ? rows[nextIdx].id : nil
         }
         return .handled
     }
