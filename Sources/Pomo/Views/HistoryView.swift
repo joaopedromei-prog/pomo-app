@@ -101,7 +101,7 @@ struct HistoryView: View {
                     }
                 }
                 .overlay(alignment: .topLeading) {
-                    if let bar = hoveredBar {
+                    if let bar = hoveredBar, bar.hours > 0 {
                         BarTooltip(bar: bar)
                             .offset(x: max(4, tooltipPos.x - 50), y: max(4, tooltipPos.y - 68))
                             .allowsHitTesting(false)
