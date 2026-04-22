@@ -429,6 +429,8 @@ private struct TaskRowView: View {
                         .foregroundStyle(item.isStarred ? Color(white: 0.73) : Color(white: 0.30))
                 }
                 .buttonStyle(.plain)
+                .help("Destacar tarefa")
+                .onHover { inside in if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() } }
 
                 // Due date picker
                 DueDateButton(currentDate: item.dueDate, onPick: onSetDueDate)
@@ -440,7 +442,8 @@ private struct TaskRowView: View {
                         .foregroundStyle(Color(white: 0.30))
                 }
                 .buttonStyle(.plain)
-                .help("Adicionar subtarefa (⌥Enter)")
+                .help("Criar subtarefa (⌥↩)")
+                .onHover { inside in if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() } }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
@@ -542,6 +545,8 @@ private struct DueDateButton: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
+        .help("Definir data")
+        .onHover { inside in if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() } }
         .popover(isPresented: $showCustom) {
             VStack(spacing: 12) {
                 DatePicker("", selection: $customDate, displayedComponents: .date)
