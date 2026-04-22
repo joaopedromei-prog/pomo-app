@@ -83,6 +83,7 @@ struct MainView: View {
             }
             .foregroundStyle(selected == tab ? .primary : .secondary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
