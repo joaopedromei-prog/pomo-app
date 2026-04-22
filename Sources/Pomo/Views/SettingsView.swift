@@ -83,7 +83,7 @@ private struct SettingsSection<Content: View>: View {
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .tracking(1.5)
                 .foregroundStyle(.secondary)
-            VStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 14) {
                 content()
             }
             .padding(16)
@@ -100,27 +100,76 @@ private struct DurationRow: View {
     let step: Int
     var unit = "min"
 
+    @State private var draft = ""
+    @FocusState private var isFocused: Bool
+
     var body: some View {
         HStack {
             Text(label)
                 .font(.system(size: 13))
             Spacer()
-            HStack(spacing: 8) {
-                Button {
-                    if value - step >= range.lowerBound { value -= step }
-                } label: { Image(systemName: "minus").frame(width: 20) }
-                .buttonStyle(.plain)
+            HStack(spacing: 6) {
+                HStack(spacing: 0) {
+                    TextField("", text: $draft)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 13))
+                        .multilineTextAlignment(.center)
+                        .frame(width: 42)
+                        .focused($isFocused)
+                        .onSubmit { commit() }
+                        .onExitCommand { draft = "\(value)"; isFocused = false }
+                        .onHover { inside in if inside { NSCursor.iBeam.push() } else { NSCursor.pop() } }
 
-                Text("\(value) \(unit)")
-                    .font(.system(size: 13, design: .monospaced))
-                    .frame(minWidth: 64, alignment: .center)
+                    Rectangle()
+                        .fill(Color(white: 0.22))
+                        .frame(width: 1, height: 24)
 
-                Button {
-                    if value + step <= range.upperBound { value += step }
-                } label: { Image(systemName: "plus").frame(width: 20) }
-                .buttonStyle(.plain)
+                    VStack(spacing: 0) {
+                        Button { nudge(+1) } label: {
+                            Image(systemName: "chevron.up")
+                                .font(.system(size: 8, weight: .bold))
+                                .frame(width: 22, height: 13)
+                        }
+                        .buttonStyle(.plain)
+                        Rectangle()
+                            .fill(Color(white: 0.22))
+                            .frame(height: 1)
+                        Button { nudge(-1) } label: {
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 8, weight: .bold))
+                                .frame(width: 22, height: 13)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .foregroundStyle(Color(white: 0.50))
+                }
+                .padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 7)
+                        .fill(Color(white: 0.12))
+                        .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color(white: 0.22), lineWidth: 1))
+                )
+
+                Text(unit)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
             }
-            .foregroundStyle(.primary)
+        }
+        .onAppear { draft = "\(value)" }
+        .onChange(of: value) { _, new in if !isFocused { draft = "\(new)" } }
+        .onChange(of: isFocused) { _, focused in if !focused { commit() } }
+    }
+
+    private func nudge(_ direction: Int) {
+        let next = value + direction * step
+        if range.contains(next) { value = next }
+    }
+
+    private func commit() {
+        if let v = Int(draft.trimmingCharacters(in: .whitespaces)), range.contains(v) {
+            value = v
+        } else {
+            draft = "\(value)"
         }
     }
 }

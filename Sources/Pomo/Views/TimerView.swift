@@ -50,7 +50,6 @@ private struct ClockDisplay: View {
         let totalDigits = CGFloat(minuteDigits + 2)
         let digitCellWidth = max(32, (containerWidth - gaps - colonWidth - margin) / totalDigits)
         let cardW = digitCellWidth * CGFloat(minuteDigits)
-        let secCardW = digitCellWidth * 2
         let cardH = digitCellWidth * (180.0 / 116.0)
         let fs = cardH * (130.0 / 180.0)
         return (cardW, cardH, fs)
@@ -82,6 +81,7 @@ struct TimerView: View {
     @Environment(TimerEngine.self) private var engine
     @Environment(PersistenceStore.self) private var store
     @State private var clockWidth: CGFloat = 600
+    @State private var slideFromTrailing = true
 
     var body: some View {
         ZStack {
@@ -90,7 +90,16 @@ struct TimerView: View {
             VStack(spacing: 0) {
                 Picker("", selection: Binding(
                     get: { engine.mode },
-                    set: { engine.switchMode(to: $0) }
+                    set: { newMode in
+                        let modes = TimerMode.allCases
+                        if let ni = modes.firstIndex(of: newMode),
+                           let ci = modes.firstIndex(of: engine.mode) {
+                            slideFromTrailing = ni > ci
+                        }
+                        withAnimation(.spring(response: 0.38, dampingFraction: 0.88)) {
+                            engine.switchMode(to: newMode)
+                        }
+                    }
                 )) {
                     ForEach(TimerMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                 }
@@ -101,19 +110,19 @@ struct TimerView: View {
 
                 Spacer()
 
-                Text(engine.phaseLabel)
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .tracking(4)
-                    .foregroundStyle(Color(white: 0.35))
-                    .padding(.bottom, 18)
+                Group {
+                    Text(engine.phaseLabel)
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .tracking(4)
+                        .foregroundStyle(Color(white: 0.35))
+                        .padding(.bottom, 18)
 
-                ClockDisplay(
-                    totalSeconds: displaySeconds,
-                    containerWidth: clockWidth,
-                    sessionMaxSeconds: engine.mode == .pomodoro ? engine.focusDuration : 0
-                )
+                    ClockDisplay(
+                        totalSeconds: displaySeconds,
+                        containerWidth: clockWidth,
+                        sessionMaxSeconds: engine.mode == .pomodoro ? engine.focusDuration : 0
+                    )
 
-                if engine.mode == .pomodoro {
                     HStack(spacing: 8) {
                         ForEach(0..<engine.cyclesBeforeLongBreak, id: \.self) { i in
                             Circle()
@@ -123,48 +132,43 @@ struct TimerView: View {
                         }
                     }
                     .padding(.top, 20)
-                }
+                    .opacity(engine.mode == .pomodoro ? 1 : 0)
 
-                if !todayFocusLabel.isEmpty {
-                    Text(todayFocusLabel)
+                    Text(todayFocusLabel.isEmpty ? " " : todayFocusLabel)
                         .font(.system(size: 11, weight: .regular, design: .monospaced))
                         .foregroundStyle(Color(white: 0.3))
                         .padding(.top, 12)
+                        .opacity(todayFocusLabel.isEmpty ? 0 : 1)
                 }
+                .id(engine.mode)
+                .transition(.asymmetric(
+                    insertion: .move(edge: slideFromTrailing ? .trailing : .leading).combined(with: .opacity),
+                    removal:   .move(edge: slideFromTrailing ? .leading  : .trailing).combined(with: .opacity)
+                ))
 
                 Spacer()
 
                 HStack(spacing: 36) {
-                    labeledButton(icon: "arrow.counterclockwise", label: "reiniciar") {
-                        engine.reset()
-                    }
-
-                    if engine.mode == .stopwatch && engine.phase == .stopwatchRunning {
-                        labeledButton(
-                            icon: engine.isRunning && !engine.isPaused ? "stop.fill" : "play.fill",
-                            label: engine.isRunning && !engine.isPaused ? "parar" : "continuar",
-                            primary: true
-                        ) {
-                            engine.isRunning && !engine.isPaused ? engine.stopStopwatch() : engine.start()
+                    if engine.isRunning {
+                        labeledButton(icon: "xmark", label: "encerrar") {
+                            engine.reset()
+                        }
+                        if engine.mode == .pomodoro {
+                            labeledButton(icon: "forward.fill", label: "pular") {
+                                engine.skip()
+                            }
+                        } else {
+                            labeledButton(icon: "stop.fill", label: "parar") {
+                                engine.stopStopwatch()
+                            }
                         }
                     } else {
-                        labeledButton(
-                            icon: engine.isRunning && !engine.isPaused ? "pause.fill" : "play.fill",
-                            label: engine.isRunning && !engine.isPaused ? "pausar" : "iniciar",
-                            primary: true
-                        ) {
-                            engine.isRunning && !engine.isPaused ? engine.pause() : engine.start()
+                        labeledButton(icon: "play.fill", label: "iniciar", primary: true) {
+                            engine.start()
                         }
-                    }
-
-                    if engine.mode == .pomodoro {
-                        labeledButton(icon: "forward.fill", label: "pular") {
-                            engine.skip()
-                        }
-                    } else {
-                        Color.clear.frame(width: 52, height: 52)
                     }
                 }
+                .animation(.easeInOut(duration: 0.2), value: engine.isRunning)
                 .padding(.bottom, 36)
             }
         }
