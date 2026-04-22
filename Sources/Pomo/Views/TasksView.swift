@@ -389,7 +389,7 @@ private struct TaskRowView: View {
                 if isEditing {
                     TextField("", text: $editingDraft)
                         .textFieldStyle(.plain)
-                        .font(.system(size: 13))
+                        .font(.system(size: 14))
                         .foregroundStyle(Color(white: 0.80))
                         .focused(editingFocused)
                         .onSubmit(onCommitEdit)
@@ -399,7 +399,7 @@ private struct TaskRowView: View {
                         }
                 } else {
                     Text(item.title)
-                        .font(.system(size: 13))
+                        .font(.system(size: 14))
                         .foregroundStyle(item.isCompleted ? Color(white: 0.35) : Color(white: 0.73))
                         .strikethrough(item.isCompleted, color: Color(white: 0.35))
                         .lineLimit(1)
@@ -504,7 +504,7 @@ private struct NewTaskInput: View {
                 .foregroundStyle(Color(white: 0.35))
             TextField("Nova tarefa", text: $text)
                 .textFieldStyle(.plain)
-                .font(.system(size: 13))
+                .font(.system(size: 14))
                 .foregroundStyle(Color(white: 0.85))
                 .focused(focused)
                 .onSubmit(onSubmit)
