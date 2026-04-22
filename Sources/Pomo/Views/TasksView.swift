@@ -84,6 +84,7 @@ struct TasksView: View {
     @State private var showCompleted = false
     @State private var draggedID: UUID?
     @State private var dropZone: DropZone?
+    @State private var newlyCreatedID: UUID?
     @FocusState private var newTaskFocused: Bool
     @FocusState private var editingFocused: Bool
 
@@ -195,10 +196,22 @@ struct TasksView: View {
                 editingFocused = true
             },
             onCommitEdit: {
-                store.updateTodoTitle(id: row.id, title: editingDraft)
+                let trimmed = editingDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.isEmpty {
+                    store.deleteTodo(id: row.id)
+                } else {
+                    store.updateTodoTitle(id: row.id, title: trimmed)
+                }
+                newlyCreatedID = nil
                 editingID = nil
             },
-            onCancelEdit: { editingID = nil },
+            onCancelEdit: {
+                if newlyCreatedID == row.id {
+                    store.deleteTodo(id: row.id)
+                    newlyCreatedID = nil
+                }
+                editingID = nil
+            },
             onToggleComplete: { store.toggleCompleted(id: row.id) },
             onToggleStar: { store.toggleStarred(id: row.id) },
             onSetDueDate: { date in store.setDueDate(id: row.id, date: date) },
@@ -235,6 +248,7 @@ struct TasksView: View {
         editingID = item.id
         editingDraft = ""
         editingFocused = true
+        newlyCreatedID = item.id
     }
 
     private func handleDeleteKey() -> KeyPress.Result {
