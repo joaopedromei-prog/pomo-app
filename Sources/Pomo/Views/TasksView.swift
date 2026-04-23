@@ -534,8 +534,16 @@ private struct NewTaskInput: View {
         .padding(.vertical, 11)
         .background(Color(white: 0.1))
         .clipShape(RoundedRectangle(cornerRadius: 10))
-        .onHover { inside in
-            if inside { NSCursor.iBeam.push() } else { NSCursor.pop() }
+        .overlay {
+            if !focused.wrappedValue {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.clear)
+                    .contentShape(RoundedRectangle(cornerRadius: 10))
+                    .onTapGesture { focused.wrappedValue = true }
+                    .onHover { inside in
+                        if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+                    }
+            }
         }
     }
 }
