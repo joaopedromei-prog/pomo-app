@@ -517,33 +517,43 @@ private struct NewTaskInput: View {
     @Binding var text: String
     var focused: FocusState<Bool>.Binding
     let onSubmit: () -> Void
+    @State private var isActive = false
 
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "plus.circle")
                 .font(.system(size: 14))
                 .foregroundStyle(Color(white: 0.35))
-            TextField("Nova tarefa", text: $text)
-                .textFieldStyle(.plain)
-                .font(.system(size: 14))
-                .foregroundStyle(Color(white: 0.85))
-                .focused(focused)
-                .onSubmit(onSubmit)
+            if isActive {
+                TextField("Nova tarefa", text: $text)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color(white: 0.85))
+                    .focused(focused)
+                    .onSubmit(onSubmit)
+            } else {
+                Text("Nova tarefa")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color(white: 0.30))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
         .background(Color(white: 0.1))
         .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay {
-            if !focused.wrappedValue {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.clear)
-                    .contentShape(RoundedRectangle(cornerRadius: 10))
-                    .onTapGesture { focused.wrappedValue = true }
-                    .onHover { inside in
-                        if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-                    }
+        .contentShape(RoundedRectangle(cornerRadius: 10))
+        .onTapGesture {
+            isActive = true
+            DispatchQueue.main.async { focused.wrappedValue = true }
+        }
+        .onHover { inside in
+            if !isActive {
+                if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
             }
+        }
+        .onChange(of: focused.wrappedValue) { _, isFocused in
+            if !isFocused { isActive = false }
         }
     }
 }
