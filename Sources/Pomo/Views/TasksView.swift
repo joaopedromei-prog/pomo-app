@@ -187,6 +187,17 @@ struct TasksView: View {
                 selectedID = nil
             }
         }
+        .onChange(of: editingFocused) { _, focused in
+            guard !focused, let id = editingID else { return }
+            let trimmed = editingDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty {
+                store.deleteTodo(id: id)
+            } else {
+                store.updateTodoTitle(id: id, title: trimmed)
+            }
+            newlyCreatedID = nil
+            editingID = nil
+        }
     }
 
     // MARK: - Row builder
