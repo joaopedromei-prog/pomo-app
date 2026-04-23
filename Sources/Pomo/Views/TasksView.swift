@@ -85,6 +85,7 @@ struct TasksView: View {
     @State private var draggedID: UUID?
     @State private var dropZone: DropZone?
     @State private var newlyCreatedID: UUID?
+    @State private var scrollTarget: UUID?
     @FocusState private var newTaskFocused: Bool
     @FocusState private var editingFocused: Bool
 
@@ -128,26 +129,34 @@ struct TasksView: View {
                 if flatActive.isEmpty && flatCompleted.isEmpty {
                     EmptyTaskState()
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 4) {
-                            ForEach(flatActive) { row in
-                                rowView(row)
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 4) {
+                                ForEach(flatActive) { row in
+                                    rowView(row)
+                                }
+                                if !flatCompleted.isEmpty {
+                                    CompletedSection(
+                                        rows: flatCompleted,
+                                        expanded: $showCompleted,
+                                        hoveredID: $hoveredID,
+                                        selectedID: $selectedID,
+                                        editingID: $editingID,
+                                        editingDraft: $editingDraft,
+                                        editingFocused: $editingFocused,
+                                        store: store
+                                    )
+                                }
                             }
-                            if !flatCompleted.isEmpty {
-                                CompletedSection(
-                                    rows: flatCompleted,
-                                    expanded: $showCompleted,
-                                    hoveredID: $hoveredID,
-                                    selectedID: $selectedID,
-                                    editingID: $editingID,
-                                    editingDraft: $editingDraft,
-                                    editingFocused: $editingFocused,
-                                    store: store
-                                )
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 32)
+                        }
+                        .onChange(of: scrollTarget) { _, id in
+                            guard let id else { return }
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                proxy.scrollTo(id, anchor: .center)
                             }
                         }
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 32)
                     }
                 }
             }
@@ -155,6 +164,8 @@ struct TasksView: View {
         .focusable()
         .focusEffectDisabled()
         .onKeyPress(.space) { handleSpaceKey() }
+        .onKeyPress(.upArrow) { handleUpArrow() }
+        .onKeyPress(.downArrow) { handleDownArrow() }
         .background {
             Group {
                 Button("delete") { _ = handleDeleteKey() }
@@ -236,9 +247,14 @@ struct TasksView: View {
     // MARK: - Actions
 
     private func createTask() {
-        guard !newTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        store.addTodo(title: newTaskTitle)
-        newTaskTitle = ""
+        let trimmed = newTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if let item = store.addTodo(title: trimmed) {
+            newTaskTitle = ""
+            newTaskFocused = false
+            selectedID = item.id
+            scrollTarget = item.id
+        }
     }
 
     private func addSubtask(to parentId: UUID) {
@@ -282,8 +298,50 @@ struct TasksView: View {
     }
 
     private func handleAddSubtask() -> KeyPress.Result {
+        if newTaskFocused {
+            let trimmed = newTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return .ignored }
+            if let item = store.addTodo(title: trimmed) {
+                newTaskTitle = ""
+                newTaskFocused = false
+                addSubtask(to: item.id)
+            }
+            return .handled
+        }
         guard let id = selectedID, editingID == nil else { return .ignored }
         addSubtask(to: id)
+        return .handled
+    }
+
+    private func handleUpArrow() -> KeyPress.Result {
+        guard editingID == nil, !newTaskFocused else { return .ignored }
+        let rows = flatActive
+        guard !rows.isEmpty else { return .ignored }
+        if let id = selectedID, let idx = rows.firstIndex(where: { $0.id == id }) {
+            if idx > 0 {
+                selectedID = rows[idx - 1].id
+                scrollTarget = selectedID
+            }
+        } else {
+            selectedID = rows.last?.id
+            scrollTarget = selectedID
+        }
+        return .handled
+    }
+
+    private func handleDownArrow() -> KeyPress.Result {
+        guard editingID == nil, !newTaskFocused else { return .ignored }
+        let rows = flatActive
+        guard !rows.isEmpty else { return .ignored }
+        if let id = selectedID, let idx = rows.firstIndex(where: { $0.id == id }) {
+            if idx < rows.count - 1 {
+                selectedID = rows[idx + 1].id
+                scrollTarget = selectedID
+            }
+        } else {
+            selectedID = rows.first?.id
+            scrollTarget = selectedID
+        }
         return .handled
     }
 }
