@@ -219,13 +219,17 @@ struct TasksView: View {
             },
             onCommitEdit: {
                 let trimmed = editingDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                let savedRow = row
                 if trimmed.isEmpty {
                     store.deleteTodo(id: row.id)
+                    newlyCreatedID = nil
+                    editingID = nil
                 } else {
                     store.updateTodoTitle(id: row.id, title: trimmed)
+                    newlyCreatedID = nil
+                    editingID = nil
+                    DispatchQueue.main.async { createSibling(after: savedRow) }
                 }
-                newlyCreatedID = nil
-                editingID = nil
             },
             onCancelEdit: {
                 if newlyCreatedID == row.id {
@@ -322,6 +326,23 @@ struct TasksView: View {
         guard let id = selectedID, editingID == nil else { return .ignored }
         addSubtask(to: id)
         return .handled
+    }
+
+    private func createSibling(after currentRow: FlatRow) {
+        let parentId = currentRow.item.parentId
+        let rowsSnapshot = flatActive
+        guard let item = store.addTodo(title: "Nova tarefa", parentId: parentId) else { return }
+        if let currentIdx = rowsSnapshot.firstIndex(where: { $0.id == currentRow.id }) {
+            let nextSibling = rowsSnapshot[(currentIdx + 1)...].first(where: { $0.item.parentId == parentId })
+            if let nextSibling {
+                store.moveTodo(id: item.id, newParentId: parentId, insertBeforeId: nextSibling.id)
+            }
+        }
+        selectedID = item.id
+        editingID = item.id
+        editingDraft = ""
+        editingFocused = true
+        newlyCreatedID = item.id
     }
 
     private func handleUpArrow() -> KeyPress.Result {
@@ -600,6 +621,11 @@ private struct NewTaskInput: View {
                     .foregroundStyle(Color(white: 0.85))
                     .focused(focused)
                     .onSubmit(onSubmit)
+                    .onKeyPress(.escape) {
+                        text = ""
+                        focused.wrappedValue = false
+                        return .handled
+                    }
             } else {
                 Text("Nova tarefa")
                     .font(.system(size: 14))
