@@ -148,9 +148,11 @@ final class TimerEngine {
     // MARK: - Private helpers
 
     private func startTicking() {
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+        let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in self?.tick() }
         }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
     }
 
     private func stopTicking() {
