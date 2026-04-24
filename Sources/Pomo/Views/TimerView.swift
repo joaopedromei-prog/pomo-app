@@ -230,7 +230,7 @@ struct TimerView: View {
         let past = store.sessions
             .filter { cal.isDateInToday($0.endedAt) }
             .reduce(0) { $0 + $1.actualDuration }
-        let current = (engine.phase == .focus && engine.isRunning) ? engine.elapsedSeconds : 0
+        let current = (engine.phase == .focus && engine.isRunning) ? engine.effectiveElapsed : 0
         return past + current
     }
 

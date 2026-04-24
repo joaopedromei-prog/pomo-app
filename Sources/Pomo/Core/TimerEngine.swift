@@ -49,7 +49,7 @@ final class TimerEngine {
     // MARK: - Private
     private var timer: Timer?
     private var sessionStartDate: Date?
-    private var effectiveElapsed = 0
+    private(set) var effectiveElapsed = 0
 
     struct SessionData {
         let startedAt: Date
