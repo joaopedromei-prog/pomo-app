@@ -15,14 +15,14 @@ Aplicativo de timer Pomodoro para macOS com gerenciamento de tarefas e históric
   </tr>
   <tr>
     <td><img src="docs/screenshots/timer.png" width="340"/></td>
-    <td><img src="docs/screenshots/tasks.png" width="340"/></td>
+    <td><img src="docs/screenshots/tasks-v2.png" width="340"/></td>
   </tr>
   <tr>
     <td align="center"><b>Histórico</b></td>
     <td align="center"><b>Ajustes</b></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/history.png" width="340"/></td>
+    <td><img src="docs/screenshots/history-v2.png" width="340"/></td>
     <td><img src="docs/screenshots/settings.png" width="340"/></td>
   </tr>
 </table>
