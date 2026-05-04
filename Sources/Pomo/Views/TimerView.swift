@@ -75,6 +75,52 @@ private struct ClockDisplay: View {
     }
 }
 
+// MARK: - Wall clock display — HH:MM:SS
+
+private struct WallClockDisplay: View {
+    let date: Date
+    let containerWidth: CGFloat
+
+    private var components: (h: Int, m: Int, s: Int) {
+        let c = Calendar.current.dateComponents([.hour, .minute, .second], from: date)
+        return (c.hour ?? 0, c.minute ?? 0, c.second ?? 0)
+    }
+
+    private var sizing: (cardWidth: CGFloat, cardHeight: CGFloat, fontSize: CGFloat) {
+        let spacing: CGFloat = 12
+        let colonWidth: CGFloat = 28
+        let colons: CGFloat = 2
+        let gaps = spacing * (colons + 2)
+        let colonsTotalWidth = colonWidth * colons
+        let margin: CGFloat = 40
+        let totalDigits: CGFloat = 6
+        let digitCellWidth = max(28, (containerWidth - gaps - colonsTotalWidth - margin) / totalDigits)
+        let cardW = digitCellWidth * 2
+        let cardH = digitCellWidth * (180.0 / 116.0)
+        let fs = cardH * (130.0 / 180.0)
+        return (cardW, cardH, fs)
+    }
+
+    var body: some View {
+        let s = sizing
+        let c = components
+        HStack(spacing: 12) {
+            DigitCard(value: c.h, digitCount: 2, cardWidth: s.cardWidth, cardHeight: s.cardHeight, fontSize: s.fontSize)
+            colonView(size: s.fontSize)
+            DigitCard(value: c.m, digitCount: 2, cardWidth: s.cardWidth, cardHeight: s.cardHeight, fontSize: s.fontSize)
+            colonView(size: s.fontSize)
+            DigitCard(value: c.s, digitCount: 2, cardWidth: s.cardWidth, cardHeight: s.cardHeight, fontSize: s.fontSize)
+        }
+    }
+
+    private func colonView(size: CGFloat) -> some View {
+        Text(":")
+            .font(.system(size: max(18, size * 0.32), weight: .thin))
+            .foregroundStyle(Color(white: 0.28))
+            .offset(y: -4)
+    }
+}
+
 // MARK: - Main Timer View
 
 struct TimerView: View {
@@ -117,11 +163,17 @@ struct TimerView: View {
                         .foregroundStyle(Color(white: 0.35))
                         .padding(.bottom, 18)
 
-                    ClockDisplay(
-                        totalSeconds: displaySeconds,
-                        containerWidth: clockWidth,
-                        sessionMaxSeconds: engine.mode == .pomodoro ? engine.focusDuration : 0
-                    )
+                    if engine.mode == .clock {
+                        TimelineView(.periodic(from: .now, by: 1.0)) { context in
+                            WallClockDisplay(date: context.date, containerWidth: clockWidth)
+                        }
+                    } else {
+                        ClockDisplay(
+                            totalSeconds: displaySeconds,
+                            containerWidth: clockWidth,
+                            sessionMaxSeconds: engine.mode == .pomodoro ? engine.focusDuration : 0
+                        )
+                    }
 
                     HStack(spacing: 8) {
                         ForEach(0..<engine.cyclesBeforeLongBreak, id: \.self) { i in
@@ -148,36 +200,40 @@ struct TimerView: View {
 
                 Spacer()
 
-                HStack(spacing: 36) {
-                    if engine.isRunning {
-                        labeledButton(icon: "xmark", label: "encerrar") {
-                            engine.reset()
-                        }
-                        labeledButton(
-                            icon: engine.isPaused ? "play.fill" : "pause.fill",
-                            label: engine.isPaused ? "retomar" : "pausar",
-                            primary: true
-                        ) {
-                            engine.isPaused ? engine.start() : engine.pause()
-                        }
-                        if engine.mode == .pomodoro {
-                            labeledButton(icon: "forward.fill", label: "pular") {
-                                engine.skip()
+                if engine.mode != .clock {
+                    HStack(spacing: 36) {
+                        if engine.isRunning {
+                            labeledButton(icon: "xmark", label: "encerrar") {
+                                engine.reset()
+                            }
+                            labeledButton(
+                                icon: engine.isPaused ? "play.fill" : "pause.fill",
+                                label: engine.isPaused ? "retomar" : "pausar",
+                                primary: true
+                            ) {
+                                engine.isPaused ? engine.start() : engine.pause()
+                            }
+                            if engine.mode == .pomodoro {
+                                labeledButton(icon: "forward.fill", label: "pular") {
+                                    engine.skip()
+                                }
+                            } else {
+                                labeledButton(icon: "stop.fill", label: "parar") {
+                                    engine.stopStopwatch()
+                                }
                             }
                         } else {
-                            labeledButton(icon: "stop.fill", label: "parar") {
-                                engine.stopStopwatch()
+                            labeledButton(icon: "play.fill", label: "iniciar", primary: true) {
+                                engine.start()
                             }
                         }
-                    } else {
-                        labeledButton(icon: "play.fill", label: "iniciar", primary: true) {
-                            engine.start()
-                        }
                     }
+                    .animation(.easeInOut(duration: 0.2), value: engine.isRunning)
+                    .animation(.easeInOut(duration: 0.15), value: engine.isPaused)
+                    .padding(.bottom, 36)
+                } else {
+                    Spacer().frame(height: 36 + 60 + 6 + 10)
                 }
-                .animation(.easeInOut(duration: 0.2), value: engine.isRunning)
-                .animation(.easeInOut(duration: 0.15), value: engine.isPaused)
-                .padding(.bottom, 36)
             }
         }
         .overlay {
@@ -230,7 +286,8 @@ struct TimerView: View {
         let past = store.sessions
             .filter { cal.isDateInToday($0.endedAt) }
             .reduce(0) { $0 + $1.actualDuration }
-        let current = (engine.phase == .focus && engine.isRunning) ? engine.effectiveElapsed : 0
+        let isLiveFocusable = engine.isRunning && (engine.phase == .focus || engine.phase == .stopwatchRunning)
+        let current = isLiveFocusable ? engine.effectiveElapsed : 0
         return past + current
     }
 
@@ -251,6 +308,12 @@ struct TimerView: View {
                 actualDuration: data.actualDuration
             )
             store?.insert(session: session)
+        }
+        engine.onInflightTick = { [weak store] inflight in
+            store?.setInflight(inflight)
+        }
+        engine.onInflightClear = { [weak store] in
+            store?.clearInflight()
         }
     }
 

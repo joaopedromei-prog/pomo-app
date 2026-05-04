@@ -4,6 +4,7 @@ import Observation
 enum TimerMode: String, CaseIterable {
     case pomodoro = "Pomodoro"
     case stopwatch = "Cronômetro"
+    case clock = "Relógio"
 }
 
 enum TimerPhase {
@@ -38,8 +39,10 @@ final class TimerEngine {
     var soundEnabled = true
     var notificationsEnabled = true
 
-    // MARK: - Session callback
+    // MARK: - Session callbacks
     var onSessionComplete: ((SessionData) -> Void)?
+    var onInflightTick: ((InflightSession) -> Void)?
+    var onInflightClear: (() -> Void)?
 
     func applyFocusDuration() {
         guard !isRunning && (phase == .idle || phase == .focus) else { return }
@@ -50,6 +53,8 @@ final class TimerEngine {
     private var timer: Timer?
     private var sessionStartDate: Date?
     private(set) var effectiveElapsed = 0
+    private var inflightID: UUID?
+    private var inflightKind: SessionKind = .focusPomodoro
 
     struct SessionData {
         let startedAt: Date
@@ -71,18 +76,22 @@ final class TimerEngine {
         if isPaused {
             isPaused = false
             startTicking()
+            fireInflightSnapshot()
             return
         }
 
         sessionStartDate = Date()
         effectiveElapsed = 0
+        inflightID = UUID()
 
         if mode == .stopwatch {
+            inflightKind = .stopwatch
             phase = .stopwatchRunning
             elapsedSeconds = 0
             isRunning = true
             startTicking()
         } else {
+            inflightKind = .focusPomodoro
             if phase == .idle || phase == .stopwatchRunning {
                 phase = .focus
                 remainingSeconds = focusDuration
@@ -90,17 +99,20 @@ final class TimerEngine {
             isRunning = true
             startTicking()
         }
+        fireInflightSnapshot()
     }
 
     func pause() {
         guard isRunning, !isPaused else { return }
         isPaused = true
         stopTicking()
+        fireInflightSnapshot()
     }
 
     func reset() {
         dismissAlarm()
         stopTicking()
+        flushPartialSessionIfAny()
         isRunning = false
         isPaused = false
         phase = .idle
@@ -108,15 +120,18 @@ final class TimerEngine {
         elapsedSeconds = 0
         effectiveElapsed = 0
         sessionStartDate = nil
+        inflightID = nil
     }
 
     func skip() {
         dismissAlarm()
         stopTicking()
+        flushPartialSessionIfAny()
         isRunning = false
         isPaused = false
         effectiveElapsed = 0
         sessionStartDate = nil
+        inflightID = nil
         advancePhase(completed: false)
     }
 
@@ -124,6 +139,8 @@ final class TimerEngine {
         guard phase == .stopwatchRunning else { return }
         stopTicking()
         isRunning = false
+        onInflightClear?()
+        inflightID = nil
         if elapsedSeconds > 0, let start = sessionStartDate {
             let data = SessionData(startedAt: start, endedAt: Date(),
                                    kind: .stopwatch, plannedDuration: 0,
@@ -143,9 +160,34 @@ final class TimerEngine {
         phase = .idle
         remainingSeconds = newMode == .pomodoro ? focusDuration : 0
         elapsedSeconds = 0
+        inflightID = nil
     }
 
     // MARK: - Private helpers
+
+    private func fireInflightSnapshot() {
+        guard let id = inflightID, let start = sessionStartDate else { return }
+        let snapshot = InflightSession(
+            id: id, startedAt: start, lastTickAt: Date(),
+            kind: inflightKind, plannedDuration: inflightKind == .focusPomodoro ? focusDuration : 0,
+            actualDuration: effectiveElapsed
+        )
+        onInflightTick?(snapshot)
+    }
+
+    private func flushPartialSessionIfAny() {
+        guard let id = inflightID, let start = sessionStartDate, effectiveElapsed > 0,
+              phase == .focus || phase == .stopwatchRunning else {
+            onInflightClear?()
+            return
+        }
+        let data = SessionData(startedAt: start, endedAt: Date(),
+                               kind: inflightKind, plannedDuration: inflightKind == .focusPomodoro ? focusDuration : 0,
+                               actualDuration: effectiveElapsed)
+        _ = id
+        onInflightClear?()
+        onSessionComplete?(data)
+    }
 
     private func startTicking() {
         let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
@@ -170,13 +212,20 @@ final class TimerEngine {
             elapsedSeconds += 1
             if remainingSeconds <= 0 {
                 completeCurrentPhase()
+                return
             }
+        }
+
+        if effectiveElapsed % 60 == 0 {
+            fireInflightSnapshot()
         }
     }
 
     private func completeCurrentPhase() {
         stopTicking()
         isRunning = false
+        onInflightClear?()
+        inflightID = nil
 
         if phase == .focus, let start = sessionStartDate {
             let data = SessionData(startedAt: start, endedAt: Date(),
@@ -265,7 +314,7 @@ final class TimerEngine {
 
     var phaseLabel: String {
         switch phase {
-        case .idle: return mode == .stopwatch ? "Pronto" : "Pronto"
+        case .idle: return mode == .clock ? "AGORA" : "Pronto"
         case .focus: return "FOCO"
         case .shortBreak: return "DESCANSO"
         case .longBreak: return "DESCANSO LONGO"

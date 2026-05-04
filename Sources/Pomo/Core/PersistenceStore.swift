@@ -9,6 +9,7 @@ final class PersistenceStore {
     private(set) var weeklyAggregates: [WeeklyAggregate] = []
     private(set) var monthlyAggregates: [MonthlyAggregate] = []
     private(set) var todos: [TodoItem] = []
+    private(set) var inflight: InflightSession?
 
     private let storeURL: URL
     private let encoder = JSONEncoder()
@@ -21,6 +22,34 @@ final class PersistenceStore {
         encoder.dateEncodingStrategy = .iso8601
         decoder.dateDecodingStrategy = .iso8601
         load()
+    }
+
+    // MARK: - Inflight session
+
+    func setInflight(_ session: InflightSession) {
+        inflight = session
+        save(session, to: "inflight.json")
+    }
+
+    func clearInflight() {
+        inflight = nil
+        let url = storeURL.appendingPathComponent("inflight.json")
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    func finalizeInflight(endedAt: Date) {
+        guard let inf = inflight, inf.actualDuration > 0 else {
+            clearInflight()
+            return
+        }
+        var session = Session(
+            startedAt: inf.startedAt, endedAt: endedAt,
+            kind: inf.kind, plannedDuration: inf.plannedDuration,
+            actualDuration: inf.actualDuration
+        )
+        session.id = inf.id
+        insert(session: session)
+        clearInflight()
     }
 
     // MARK: - Write
@@ -184,6 +213,10 @@ final class PersistenceStore {
         weeklyAggregates = load(from: "weekly.json") ?? []
         monthlyAggregates = load(from: "monthly.json") ?? []
         todos = load(from: "tasks.json") ?? []
+        if let orphan: InflightSession = load(from: "inflight.json") {
+            inflight = orphan
+            finalizeInflight(endedAt: orphan.lastTickAt)
+        }
     }
 
     private func load<T: Decodable>(from filename: String) -> T? {

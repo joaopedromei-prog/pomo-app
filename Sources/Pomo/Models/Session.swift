@@ -23,3 +23,12 @@ struct Session: Codable, Identifiable {
         self.actualDuration = actualDuration
     }
 }
+
+struct InflightSession: Codable {
+    var id: UUID
+    var startedAt: Date
+    var lastTickAt: Date
+    var kind: SessionKind
+    var plannedDuration: Int
+    var actualDuration: Int
+}
