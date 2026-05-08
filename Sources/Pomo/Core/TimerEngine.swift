@@ -80,6 +80,8 @@ final class TimerEngine {
             return
         }
 
+        guard !isRunning else { return }
+
         sessionStartDate = Date()
         effectiveElapsed = 0
         inflightID = UUID()
@@ -190,8 +192,9 @@ final class TimerEngine {
     }
 
     private func startTicking() {
+        stopTicking()
         let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.tick() }
+            MainActor.assumeIsolated { self?.tick() }
         }
         RunLoop.main.add(t, forMode: .common)
         timer = t
