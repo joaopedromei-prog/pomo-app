@@ -332,7 +332,8 @@ struct TasksView: View {
             }
             return .handled
         }
-        guard let id = selectedID, editingID == nil else { return .ignored }
+        guard editingID == nil else { return .ignored }
+        guard let id = hoveredID ?? selectedID else { return .ignored }
         addSubtask(to: id)
         return .handled
     }
