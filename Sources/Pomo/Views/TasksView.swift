@@ -164,7 +164,6 @@ struct TasksView: View {
         .focusable()
         .focusEffectDisabled()
         .onKeyPress(.space) { handleSpaceKey() }
-        .onKeyPress(.return) { handleReturnKey() }
         .onKeyPress(.upArrow) { handleUpArrow() }
         .onKeyPress(.downArrow) { handleDownArrow() }
         .background {
@@ -179,7 +178,7 @@ struct TasksView: View {
                     .keyboardShortcut("[", modifiers: .command)
                     .opacity(0).frame(width: 0, height: 0)
                 Button("subtask") { _ = handleAddSubtask() }
-                    .keyboardShortcut(.return, modifiers: .command)
+                    .keyboardShortcut(.return, modifiers: [])
                     .opacity(0).frame(width: 0, height: 0)
             }
         }
@@ -310,13 +309,6 @@ struct TasksView: View {
         return .handled
     }
 
-    private func handleReturnKey() -> KeyPress.Result {
-        guard editingID == nil, !newTaskFocused else { return .ignored }
-        guard let id = hoveredID ?? selectedID else { return .ignored }
-        addSubtask(to: id)
-        return .handled
-    }
-
     private func handleIndent() -> KeyPress.Result {
         guard let id = selectedID, editingID == nil else { return .ignored }
         store.indentTodo(id: id)
@@ -330,18 +322,8 @@ struct TasksView: View {
     }
 
     private func handleAddSubtask() -> KeyPress.Result {
-        if newTaskFocused {
-            let trimmed = newTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { return .ignored }
-            if let item = store.addTodo(title: trimmed) {
-                newTaskTitle = ""
-                newTaskFocused = false
-                addSubtask(to: item.id)
-            }
-            return .handled
-        }
-        guard editingID == nil else { return .ignored }
-        guard let id = hoveredID ?? selectedID else { return .ignored }
+        guard editingID == nil, !newTaskFocused else { return .ignored }
+        guard let id = selectedID else { return .ignored }
         addSubtask(to: id)
         return .handled
     }
