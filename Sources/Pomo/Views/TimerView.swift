@@ -332,11 +332,13 @@ struct TimerView: View {
                                 Circle().stroke(Color(white: 0.25), lineWidth: primary ? 0 : 1)
                             )
                     )
+                    .contentShape(Circle())
 
                 Text(label)
                     .font(.system(size: 10, weight: .regular))
                     .foregroundStyle(Color(white: 0.35))
             }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

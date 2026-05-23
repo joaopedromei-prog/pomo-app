@@ -243,7 +243,14 @@ struct TasksView: View {
             onSetDueDate: { date in store.setDueDate(id: row.id, date: date) },
             onToggleExpand: { store.setExpanded(id: row.id, expanded: !row.item.isExpanded) },
             onDelete: { store.deleteTodo(id: row.id) },
-            onAddSubtask: { addSubtask(to: row.id) }
+            onAddSubtask: { addSubtask(to: row.id) },
+            onHoverChange: { inside in
+                if inside {
+                    hoveredID = row.id
+                } else if hoveredID == row.id {
+                    hoveredID = nil
+                }
+            }
         )
         .padding(.leading, CGFloat(row.level) * 20)
         .onDrag {
@@ -283,11 +290,13 @@ struct TasksView: View {
     }
 
     private func handleDeleteKey() -> KeyPress.Result {
-        guard let id = selectedID, editingID == nil else { return .ignored }
+        guard editingID == nil else { return .ignored }
+        guard let id = hoveredID ?? selectedID else { return .ignored }
         let rows = flatActive
         let idx = rows.firstIndex(where: { $0.id == id })
         store.deleteTodo(id: id)
-        if let idx = idx {
+        if hoveredID == id { hoveredID = nil }
+        if selectedID == id, let idx = idx {
             let nextIdx = idx < rows.count - 1 ? idx + 1 : idx - 1
             selectedID = nextIdx >= 0 ? rows[nextIdx].id : nil
         }
@@ -450,6 +459,7 @@ private struct TaskRowView: View {
     let onToggleExpand: () -> Void
     let onDelete: () -> Void
     let onAddSubtask: () -> Void
+    var onHoverChange: ((Bool) -> Void)? = nil
 
     @State private var isHovered = false
 
@@ -567,7 +577,10 @@ private struct TaskRowView: View {
                     .stroke(isDropChild ? Color(white: 0.40) : Color.clear, lineWidth: 1)
             )
             .contentShape(Rectangle())
-            .onHover { isHovered = $0 }
+            .onHover { inside in
+                isHovered = inside
+                onHoverChange?(inside)
+            }
             .onTapGesture(perform: onSelect)
             .contextMenu {
                 Button(role: .destructive, action: onDelete) {

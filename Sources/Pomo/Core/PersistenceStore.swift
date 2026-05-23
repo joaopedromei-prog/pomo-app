@@ -140,6 +140,7 @@ final class PersistenceStore {
             }
             todos[i].isCompleted = true
             todos[i].completedAt = now
+            NotificationManager.shared.playTaskCompletionSound()
         }
         saveTodos()
     }

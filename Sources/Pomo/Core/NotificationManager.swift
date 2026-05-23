@@ -24,6 +24,10 @@ final class NotificationManager: @unchecked Sendable {
         NSSound(named: "Glass")?.play()
     }
 
+    func playTaskCompletionSound() {
+        (NSSound(named: "Pop") ?? NSSound(named: "Tink") ?? NSSound(named: "Glass"))?.play()
+    }
+
     private var alarmSound: NSSound?
 
     func startAlarm() {
