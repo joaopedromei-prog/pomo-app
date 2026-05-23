@@ -164,6 +164,7 @@ struct TasksView: View {
         .focusable()
         .focusEffectDisabled()
         .onKeyPress(.space) { handleSpaceKey() }
+        .onKeyPress(.return) { handleReturnKey() }
         .onKeyPress(.upArrow) { handleUpArrow() }
         .onKeyPress(.downArrow) { handleDownArrow() }
         .background {
@@ -306,6 +307,13 @@ struct TasksView: View {
     private func handleSpaceKey() -> KeyPress.Result {
         guard let id = selectedID, editingID == nil, !newTaskFocused else { return .ignored }
         store.toggleCompleted(id: id)
+        return .handled
+    }
+
+    private func handleReturnKey() -> KeyPress.Result {
+        guard editingID == nil, !newTaskFocused else { return .ignored }
+        guard let id = hoveredID ?? selectedID else { return .ignored }
+        addSubtask(to: id)
         return .handled
     }
 
