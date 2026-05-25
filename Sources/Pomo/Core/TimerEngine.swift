@@ -55,6 +55,7 @@ final class TimerEngine {
     private(set) var effectiveElapsed = 0
     private var inflightID: UUID?
     private var inflightKind: SessionKind = .focusPomodoro
+    private var lastStartedAt: Date?
 
     struct SessionData {
         let startedAt: Date
@@ -77,6 +78,7 @@ final class TimerEngine {
             isPaused = false
             startTicking()
             fireInflightSnapshot()
+            lastStartedAt = Date()
             return
         }
 
@@ -102,10 +104,12 @@ final class TimerEngine {
             startTicking()
         }
         fireInflightSnapshot()
+        lastStartedAt = Date()
     }
 
     func pause() {
         guard isRunning, !isPaused else { return }
+        if let last = lastStartedAt, Date().timeIntervalSince(last) < 0.3 { return }
         isPaused = true
         stopTicking()
         fireInflightSnapshot()
